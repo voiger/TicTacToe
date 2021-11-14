@@ -28,10 +28,11 @@ public class Engine {
     ArrayList<BoardField> crossArray = new ArrayList<>();
     ArrayList<BoardField> zeroArray = new ArrayList<>();
     Map<BoardField, Coordinates> coordinatesByField = new IdentityHashMap<>();
-
+    ChangesEngine changesEngine;
     public static Players players;
 
-    public Engine(LinearLayout board, Context context) {
+    public Engine(LinearLayout board, Context context, ChangesEngine changesEngine) {
+        this.changesEngine = changesEngine;
         this.context = context;
         generateBoard(board);
         generateOnClick();
@@ -69,6 +70,10 @@ public class Engine {
                 crossArray.add(boardField);
             }
 
+            if (getFreeBoard().isEmpty()) {
+                win(TicTacToe.empty);
+
+            }
             if (!checkFinish(moveTicTacToe, new GameState(boardFieldsArray, moveTicTacToe, crossArray, zeroArray, coordinatesByField))) {
                 moveTicTacToe = moveTicTacToe == TicTacToe.cross ? TicTacToe.zero : TicTacToe.cross;
                 if (players == Players.One) {
@@ -82,17 +87,13 @@ public class Engine {
     }
 
     private void win(TicTacToe moveTicTacToe) {
-        DialogFragment dialogFragment = new PlayShowResultGame(moveTicTacToe);
-        dialogFragment.show(context.start);
-        //Toast.makeText(context, "Победитель " + (moveTicTacToe == TicTacToe.zero ? "Нолик" : "Крестик"), Toast.LENGTH_SHORT).show();
-        this.moveTicTacToe = TicTacToe.empty;
+        changesEngine.win(moveTicTacToe);
     }
 
     static char player = 'X';
     static char opponent = '0';
 
-    private void bot() {
-        Log.e("bot", "bot: " + moveTicTacToe);
+    public ArrayList<BoardField> getFreeBoard() {
         ArrayList<BoardField> freeBoard = new ArrayList<>();
         for (int x = 0; x < boardFieldsArray.length; x++) {
             for (int y = 0; y < boardFieldsArray[x].length; y++) {
@@ -101,18 +102,20 @@ public class Engine {
                 }
             }
         }
+        return freeBoard;
+    }
+
+    private void bot() {
+        ArrayList<BoardField> freeBoard = getFreeBoard();
         if (freeBoard.size() == 0) {
             return;
         }
-
         int maxScore = -2000;
         BoardField maxBoard = null;
         GameState gameState = new GameState(boardFieldsArray, moveTicTacToe, crossArray, zeroArray, coordinatesByField);
 
-
         for (BoardField boardField : freeBoard) {
             Coordinates coordinates = coordinatesByField.get(boardField);
-
 
             BoardField[][] boardFields = gameState.getBoardFieldsArray();
             char[][] board = new char[boardFields.length][boardFields.length];
@@ -120,34 +123,35 @@ public class Engine {
                 for (int y = 0; y < boardFields[x].length; y++) {
                     if (x == coordinates.getX() && y == coordinates.getY()) {
                         board[x][y] = player;
-
                     } else {
                         board[x][y] = boardFields[x][y].getChar();
                     }
-
                 }
-
                 int score = MinMax.minMaxStateGame(board, 0, true);
-                Log.e("bot", "bot: score" + score);
+
                 if (maxScore < score) {
                     maxScore = score;
                     maxBoard = boardField;
                 }
-
             }
         }
-        ArrayList<BoardField> teemBoard = getArrayTeamBoard(maxBoard.getTicTacToe(),gameState);
+        ArrayList<BoardField> teemBoard = getArrayTeamBoard(maxBoard.getTicTacToe(), gameState);
         teemBoard.add(maxBoard);
         maxBoard.setTicTacToe(moveTicTacToe);
 
         ArrayList<BoardField> arrayList = moveTicTacToe == TicTacToe.cross ? crossArray : zeroArray;
         arrayList.add(maxBoard);
+
         if (checkFinish(moveTicTacToe, new GameState(boardFieldsArray, moveTicTacToe, crossArray, zeroArray, coordinatesByField))) {
             win(moveTicTacToe);
-            moveTicTacToe = TicTacToe.empty;
+
 
         } else {
-            moveTicTacToe = moveTicTacToe == TicTacToe.cross ? TicTacToe.zero : TicTacToe.cross;
+            if (getFreeBoard().isEmpty()) {
+                win(TicTacToe.empty);
+            } else {
+                moveTicTacToe = moveTicTacToe == TicTacToe.cross ? TicTacToe.zero : TicTacToe.cross;
+            }
         }
     }
 
@@ -173,17 +177,6 @@ public class Engine {
                         break;
                     }
                 }
-//                do {
-//                    BoardField board = gameState.getBoardFieldsArray()[coordinatesBoard.getX() + v.getX()][coordinatesBoard.getY() + v.getY()];
-//                    if (b.getTicTacToe() == board.getTicTacToe()) {
-//                        score++;
-//                        coordinatesBoard = new Coordinates(coordinatesBoard.getX() + v.getX(),
-//                                coordinatesBoard.getY() + v.getY());
-//                    } else {
-//                        break;
-//                    }
-//                } while (isInBoard(new Coordinates(coordinatesBoard.getX() + v.getX(),
-//                        coordinatesBoard.getY() + v.getY())));
                 if (score == 2) {
                     return true;
                 }
@@ -226,5 +219,17 @@ public class Engine {
             columns.addView(row);
         }
         board.addView(columns);
+    }
+
+    public void restartGame(TicTacToe moveTicTacToe) {
+        for (int x = 0; x < boardFieldsArray.length; x++) {
+            for (int y = 0; y < boardFieldsArray[x].length; y++) {
+                BoardField boardField = boardFieldsArray[x][y];
+                boardField.setTicTacToe(TicTacToe.empty);
+            }
+        }
+        crossArray.clear();
+        zeroArray.clear();
+        this.moveTicTacToe = moveTicTacToe;
     }
 }

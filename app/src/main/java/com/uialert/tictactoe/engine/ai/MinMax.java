@@ -14,8 +14,6 @@ public class MinMax {
 
     public static int minMaxStateGame(char[][] board, int depth, boolean isMax) {
 
-
-
         int score = evaluate(board);
 
         // If Maximizer has won the game
@@ -30,7 +28,7 @@ public class MinMax {
 
         // If there are no more moves and
         // no winner then it is a tie
-        if (isMovesLeft(board) == false)
+        if (!isMovesLeft(board))
             return 0;
 
         if (isMax) {

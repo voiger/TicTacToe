@@ -55,6 +55,7 @@ public class BoardField extends RelativeLayout {
                 textView.setText("X");
                 break;
             case empty:
+                textView.setText("▓");
                 break;
         }
     }
